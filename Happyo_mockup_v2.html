@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Happyo v2.0 インタラクティブプロトタイプ</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #2D3561;
+  --navy-deep: #1a2040;
+  --coral: #F25C78;
+  --coral-light: #ff8fa3;
+  --teal: #4AC1C1;
+  --teal-light: #7de0e0;
+  --yellow: #F2C744;
+  --yellow-light: #ffe082;
+  --cream: #FFF8F0;
+  --warm-white: #FFFCF7;
+  --soft-gray: #f0ede8;
+  --text-dark: #2a2a3a;
+  --text-mid: #6b6b80;
+  --text-light: #9a9ab0;
+  --shadow-soft: 0 4px 20px rgba(45,53,97,0.08);
+  --shadow-med: 0 8px 32px rgba(45,53,97,0.12);
+  --shadow-heavy: 0 12px 48px rgba(45,53,97,0.18);
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans JP',sans-serif; background:#e8e4df; color:var(--text-dark); overflow-x:hidden; }
+
+/* ── Top Bar ── */
+.top-bar {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  background:var(--navy-deep); padding:0 24px;
+  display:flex; align-items:center; justify-content:space-between; height:56px;
+  box-shadow:0 2px 20px rgba(0,0,0,0.3);
+}
+.top-bar-logo { font-family:'Zen Maru Gothic',sans-serif; font-weight:900; font-size:22px; color:white; letter-spacing:2px; }
+.top-bar-logo span { color:var(--coral); }
+.top-bar-right { display:flex; align-items:center; gap:12px; }
+.top-bar-sub { color:var(--text-light); font-size:11px; letter-spacing:1px; }
+.premium-toggle { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:20px; cursor:pointer; user-select:none; }
+.premium-toggle .label { color:rgba(255,255,255,0.6); font-size:11px; font-weight:600; }
+.premium-toggle .label.active { color:var(--yellow); }
+.toggle-switch { width:36px; height:20px; background:rgba(255,255,255,0.2); border-radius:10px; position:relative; transition:background .3s; }
+.toggle-switch.on { background:var(--yellow); }
+.toggle-switch::after { content:''; position:absolute; width:16px; height:16px; background:white; border-radius:50%; top:2px; left:2px; transition:left .3s; }
+.toggle-switch.on::after { left:18px; }
+
+/* ── Screen Tabs ── */
+.screen-tabs {
+  position:fixed; top:56px; left:0; right:0; z-index:99;
+  background:var(--navy); display:flex; overflow-x:auto;
+  scrollbar-width:none; border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.screen-tabs::-webkit-scrollbar { display:none; }
+.screen-tab {
+  flex-shrink:0; padding:12px 18px; font-size:12px; font-weight:500;
+  color:rgba(255,255,255,0.5); cursor:pointer; transition:all .3s;
+  border-bottom:3px solid transparent; white-space:nowrap;
+}
+.screen-tab:hover { color:rgba(255,255,255,0.8); }
+.screen-tab.active { color:white; border-bottom-color:var(--coral); }
+.screen-tab .tab-icon { margin-right:4px; }
+
+/* ── Stage ── */
+.stage { margin-top:104px; padding:30px 20px 60px; display:flex; justify-content:center; min-height:calc(100vh - 104px); }
+.screen { display:none; width:100%; max-width:1200px; }
+.screen.active { display:block; animation:screenIn .4s ease; }
+@keyframes screenIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+.device-label { text-align:center; margin-bottom:14px; font-size:12px; font-weight:600; color:var(--text-mid); letter-spacing:2px; }
+.device-center { display:flex; justify-content:center; }
+
+/* ── Device Frames ── */
+.tablet-frame { width:700px; max-width:100%; height:500px; background:#111; border-radius:28px; padding:14px; box-shadow:var(--shadow-heavy); }
+.tablet-inner { width:100%; height:100%; border-radius:16px; overflow:hidden; position:relative; }
+.phone-frame { width:340px; height:700px; background:#111; border-radius:40px; padding:10px; box-shadow:var(--shadow-heavy); }
+.phone-inner { width:100%; height:100%; border-radius:32px; overflow:hidden; position:relative; background:var(--warm-white); }
+.phone-notch { position:absolute; top:0; left:50%; transform:translateX(-50%); width:110px; height:26px; background:#111; border-radius:0 0 18px 18px; z-index:10; }
+.phone-scroll { height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.phone-scroll::-webkit-scrollbar { display:none; }
+
+/* ── Bottom Nav ── */
+.bottom-nav { position:absolute; bottom:0; left:0; right:0; height:64px; background:white; border-top:1px solid #eee; display:flex; align-items:center; z-index:5; }
+.nav-item { flex:1; text-align:center; font-size:9px; font-weight:600; color:var(--text-light); cursor:pointer; padding:6px 0; }
+.nav-item.active { color:var(--coral); }
+.nav-item .nav-icon { display:block; font-size:18px; margin-bottom:2px; }
+
+/* ═══ SCREEN 1: KIDS TABLET - むーむ対話 ═══ */
+.kids-screen { width:100%; height:100%; background:linear-gradient(170deg,#e8f4f8 0%,#fce4ec 40%,#fff8e1 80%,#e0f7fa 100%); position:relative; overflow:hidden; }
+.deco-cloud { position:absolute; background:rgba(255,255,255,0.7); border-radius:50%; }
+.deco-cloud::before,.deco-cloud::after { content:''; position:absolute; background:inherit; border-radius:50%; }
+.dc1 { width:80px; height:40px; top:20px; left:40px; animation:floatCloud 8s ease-in-out infinite; }
+.dc1::before { width:50px; height:50px; top:-25px; left:10px; }
+.dc1::after { width:40px; height:40px; top:-18px; left:35px; }
+.dc2 { width:60px; height:30px; top:40px; right:80px; animation:floatCloud 10s ease-in-out infinite 2s; opacity:.5; }
+.dc2::before { width:35px; height:35px; top:-18px; left:8px; }
+.dc2::after { width:30px; height:30px; top:-12px; left:25px; }
+@keyframes floatCloud { 0%,100%{transform:translateX(0) translateY(0)} 50%{transform:translateX(15px) translateY(-8px)} }
+.deco-star { position:absolute; color:var(--yellow); font-size:20px; animation:twinkle 2s ease-in-out infinite; }
+.ds1 { top:25px; left:180px; animation-delay:.5s; }
+.ds2 { top:50px; right:160px; animation-delay:1.2s; font-size:14px; }
+@keyframes twinkle { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:1;transform:scale(1.2)} }
+
+/* Moomu Character */
+.moomu-wrap { position:absolute; left:50%; top:25%; transform:translate(-50%,-50%); text-align:center; transition:all .6s ease; }
+.moomu-wrap.talking { top:18%; }
+.moomu-wrap.recording { top:12%; transform:translate(-50%,-50%) scale(.7); }
+.moomu-body { width:120px; height:78px; background:white; border-radius:55px 55px 45px 45px; position:relative; margin:0 auto; box-shadow:0 8px 25px rgba(74,193,193,0.2); animation:momuBounce 3s ease-in-out infinite; }
+.moomu-body::before { content:''; position:absolute; width:60px; height:50px; background:white; border-radius:50%; top:-25px; left:8px; }
+.moomu-body::after { content:''; position:absolute; width:50px; height:45px; background:white; border-radius:50%; top:-20px; right:12px; }
+@keyframes momuBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+.moomu-face { position:absolute; top:14px; left:0; right:0; z-index:2; display:flex; flex-direction:column; align-items:center; }
+.moomu-eyes { display:flex; gap:24px; margin-bottom:5px; }
+.moomu-eye { width:15px; height:17px; background:var(--navy); border-radius:50%; position:relative; animation:blink 4s ease-in-out infinite; }
+.moomu-eye::after { content:''; position:absolute; width:5px; height:5px; background:white; border-radius:50%; top:3px; right:2px; }
+@keyframes blink { 0%,45%,55%,100%{transform:scaleY(1)} 50%{transform:scaleY(.1)} }
+.moomu-cheeks { display:flex; gap:42px; margin-top:2px; }
+.moomu-cheek { width:14px; height:8px; background:rgba(242,92,120,0.25); border-radius:50%; }
+.moomu-mouth { width:12px; height:7px; border:2px solid var(--navy); border-top:none; border-radius:0 0 10px 10px; margin-top:1px; }
+.moomu-mouth.open { width:14px; height:12px; background:var(--coral-light); border:none; border-radius:50%; animation:mouthTalk .3s ease-in-out infinite alternate; }
+@keyframes mouthTalk { from{transform:scaleY(.6)} to{transform:scaleY(1)} }
+.moomu-name { font-family:'Zen Maru Gothic',sans-serif; font-size:13px; font-weight:700; color:var(--teal); margin-top:6px; }
+
+/* Speech Bubble */
+.speech-bubble { position:absolute; left:50%; bottom:38%; transform:translateX(-50%); background:white; border-radius:20px; padding:14px 22px; box-shadow:var(--shadow-soft); max-width:80%; text-align:center; transition:all .4s; }
+.speech-bubble::after { content:''; position:absolute; top:-10px; left:50%; transform:translateX(-50%); border:10px solid transparent; border-bottom-color:white; border-top:none; }
+.speech-text { font-family:'Zen Maru Gothic',sans-serif; font-size:18px; font-weight:700; color:var(--navy); line-height:1.5; }
+.speech-text .hl { color:var(--coral); }
+
+/* Voice Waves */
+.voice-waves { display:flex; align-items:center; justify-content:center; gap:3px; height:30px; margin-top:8px; }
+.voice-waves.hidden { display:none; }
+.wave-bar { width:4px; background:var(--teal); border-radius:2px; animation:waveAnim .6s ease-in-out infinite alternate; }
+.wave-bar:nth-child(1) { height:8px; animation-delay:0s; }
+.wave-bar:nth-child(2) { height:16px; animation-delay:.1s; }
+.wave-bar:nth-child(3) { height:24px; animation-delay:.2s; }
+.wave-bar:nth-child(4) { height:16px; animation-delay:.3s; }
+.wave-bar:nth-child(5) { height:8px; animation-delay:.4s; }
+@keyframes waveAnim { to{height:6px} }
+
+/* Record indicator */
+.rec-indicator { position:absolute; top:12px; right:12px; display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.5); padding:4px 10px; border-radius:20px; color:white; font-size:11px; font-weight:700; opacity:0; transition:opacity .3s; }
+.rec-indicator.show { opacity:1; }
+.rec-dot { width:10px; height:10px; background:#ff3b30; border-radius:50%; animation:recPulse 1s ease-in-out infinite; }
+@keyframes recPulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* Demo controls */
+.demo-controls { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); display:flex; gap:6px; z-index:5; }
+.demo-btn { padding:6px 14px; border:none; border-radius:16px; font-size:11px; font-weight:600; cursor:pointer; background:rgba(0,0,0,0.15); color:var(--text-dark); transition:all .2s; }
+.demo-btn:hover { background:rgba(0,0,0,0.25); }
+.demo-btn.active { background:var(--coral); color:white; }
+
+/* Timeout spinner */
+.timeout-spinner { display:none; margin:8px auto 0; }
+.timeout-spinner.show { display:block; }
+.spinner-dots { display:flex; gap:6px; justify-content:center; }
+.spinner-dot { width:8px; height:8px; background:var(--teal); border-radius:50%; animation:dotBounce .6s ease-in-out infinite alternate; }
+.spinner-dot:nth-child(2) { animation-delay:.2s; }
+.spinner-dot:nth-child(3) { animation-delay:.4s; }
+@keyframes dotBounce { to{opacity:.3;transform:translateY(-4px)} }
+
+/* ═══ SCREEN 2: 対話のみモード ═══ */
+.talkonly-badge { position:absolute; top:12px; left:12px; background:var(--teal); color:white; padding:4px 10px; border-radius:12px; font-size:10px; font-weight:700; z-index:3; }
+
+/* ═══ SCREEN 3: 先生管理画面 ═══ */
+.teacher-screen { width:100%; height:100%; background:var(--cream); overflow-y:auto; }
+.teacher-header { background:linear-gradient(135deg,var(--navy),var(--navy-deep)); padding:16px 20px; color:white; }
+.teacher-header h2 { font-family:'Zen Maru Gothic',sans-serif; font-size:16px; font-weight:700; }
+.teacher-header p { font-size:11px; opacity:.7; margin-top:2px; }
+.teacher-tabs { display:flex; background:white; border-bottom:1px solid #eee; }
+.teacher-tab { flex:1; padding:10px; text-align:center; font-size:12px; font-weight:600; color:var(--text-light); cursor:pointer; border-bottom:2px solid transparent; }
+.teacher-tab.active { color:var(--coral); border-bottom-color:var(--coral); }
+.teacher-body { padding:12px; }
+
+/* Topic setting */
+.topic-card { background:white; border-radius:var(--radius-sm); padding:14px; margin-bottom:10px; box-shadow:var(--shadow-soft); }
+.topic-card h3 { font-size:13px; font-weight:700; color:var(--navy); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.topic-input { width:100%; padding:10px 12px; border:2px solid #e8e5e0; border-radius:10px; font-size:13px; font-family:inherit; outline:none; transition:border .2s; }
+.topic-input:focus { border-color:var(--teal); }
+.topic-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.topic-tag { padding:4px 10px; border-radius:14px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid #ddd; background:white; transition:all .2s; }
+.topic-tag:hover,.topic-tag.selected { background:var(--teal); color:white; border-color:var(--teal); }
+
+/* Video approval list */
+.approval-item { background:white; border-radius:var(--radius-sm); padding:12px; margin-bottom:8px; box-shadow:var(--shadow-soft); display:flex; align-items:center; gap:10px; }
+.approval-thumb { width:64px; height:48px; border-radius:8px; background:linear-gradient(135deg,#fce4ec,#e0f7fa); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+.approval-info { flex:1; min-width:0; }
+.approval-name { font-size:13px; font-weight:700; color:var(--text-dark); }
+.approval-time { font-size:10px; color:var(--text-light); margin-top:1px; }
+.approval-alert { font-size:10px; color:var(--coral); font-weight:600; margin-top:2px; }
+.approval-actions { display:flex; gap:6px; flex-shrink:0; }
+.approve-btn,.retake-btn { padding:6px 12px; border:none; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; transition:all .2s; }
+.approve-btn { background:var(--teal); color:white; }
+.approve-btn:hover { background:#3aa; }
+.approve-btn.done { background:#ccc; color:white; pointer-events:none; }
+.retake-btn { background:var(--yellow); color:var(--navy); }
+.retake-btn:hover { background:#e0b030; }
+
+/* Child checklist */
+.child-check { display:flex; align-items:center; gap:8px; padding:8px 12px; background:white; border-radius:8px; margin-bottom:4px; font-size:12px; }
+.child-check .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.child-check .dot.done { background:var(--teal); }
+.child-check .dot.pending { background:#ddd; }
+.child-check .name { font-weight:600; flex:1; }
+.child-check .status { font-size:10px; color:var(--text-light); }
+
+/* ═══ SCREEN 4: 保護者フィード ═══ */
+.parent-header { padding:40px 20px 16px; background:linear-gradient(135deg,var(--cream),#fff0f3); }
+.parent-greeting { font-size:12px; color:var(--text-mid); }
+.parent-title { font-family:'Zen Maru Gothic',sans-serif; font-size:20px; font-weight:900; color:var(--navy); margin-top:2px; }
+.parent-title .child-name { color:var(--coral); }
+.notif-banner { margin:0 16px 8px; padding:10px 14px; background:linear-gradient(90deg,var(--coral),var(--coral-light)); border-radius:var(--radius-sm); color:white; font-size:12px; font-weight:600; display:flex; align-items:center; gap:8px; animation:slideDown .5s ease; }
+@keyframes slideDown { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+.feed-date { padding:6px 20px; font-size:11px; font-weight:700; color:var(--text-light); letter-spacing:1px; }
+.video-card { margin:0 16px 10px; background:white; border-radius:var(--radius-md); overflow:hidden; box-shadow:var(--shadow-soft); cursor:pointer; transition:transform .2s; }
+.video-card:hover { transform:translateY(-2px); }
+.video-card.locked { opacity:.6; filter:blur(1px); position:relative; }
+.video-card.locked::after { content:'Premium で全動画を見る'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(45,53,97,0.7); color:white; font-size:13px; font-weight:700; border-radius:var(--radius-md); filter:none; }
+.video-thumb { height:120px; position:relative; display:flex; align-items:center; justify-content:center; }
+.thumb-g1 { background:linear-gradient(135deg,#fce4ec,#e8f4f8); }
+.thumb-g2 { background:linear-gradient(135deg,#e0f7fa,#fff8e1); }
+.thumb-g3 { background:linear-gradient(135deg,#fff0f3,#fce4ec); }
+.thumb-avatar { font-size:40px; }
+.thumb-dur { position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.6); color:white; padding:2px 6px; border-radius:6px; font-size:10px; font-weight:700; }
+.thumb-new { position:absolute; top:8px; left:8px; background:var(--coral); color:white; padding:2px 8px; border-radius:8px; font-size:9px; font-weight:800; }
+.thumb-play { position:absolute; width:40px; height:40px; background:rgba(255,255,255,0.9); border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.thumb-play::after { content:''; border-left:14px solid var(--navy); border-top:8px solid transparent; border-bottom:8px solid transparent; margin-left:3px; }
+.vcard-body { padding:12px 14px; }
+.vcard-title { font-family:'Zen Maru Gothic',sans-serif; font-size:14px; font-weight:700; color:var(--navy); }
+.vcard-sub { font-size:10px; color:var(--text-light); margin-top:3px; }
+.vcard-reactions { display:flex; gap:6px; margin-top:6px; }
+.reaction-chip { display:flex; align-items:center; gap:3px; padding:3px 8px; background:var(--cream); border-radius:12px; font-size:11px; cursor:pointer; transition:background .2s; }
+.reaction-chip:hover { background:#fce4ec; }
+.read-status { font-size:10px; color:var(--teal); font-weight:600; margin-top:4px; }
+
+/* Moomu chat area (parent) */
+.moomu-chat { margin:12px 16px; padding:12px; background:white; border-radius:var(--radius-md); box-shadow:var(--shadow-soft); }
+.moomu-chat-header { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.moomu-mini { width:28px; height:18px; background:white; border-radius:14px 14px 12px 12px; position:relative; border:2px solid var(--teal-light); }
+.moomu-chat-text { font-size:12px; color:var(--text-dark); line-height:1.5; }
+.moomu-chat-input { display:flex; gap:6px; margin-top:8px; }
+.moomu-chat-input input { flex:1; padding:8px 12px; border:2px solid #eee; border-radius:20px; font-size:12px; outline:none; }
+.moomu-chat-input input:focus { border-color:var(--teal); }
+.moomu-chat-input button { padding:8px 14px; background:var(--teal); color:white; border:none; border-radius:20px; font-size:11px; font-weight:700; cursor:pointer; }
+.premium-lock { position:relative; }
+.premium-lock::after { content:'Premium'; position:absolute; inset:0; background:rgba(45,53,97,0.85); color:var(--yellow); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; border-radius:inherit; }
+
+/* ═══ SCREEN 5: 動画再生 ═══ */
+.player-screen { height:100%; background:var(--navy-deep); display:flex; flex-direction:column; }
+.player-top { display:flex; align-items:center; padding:34px 14px 10px; color:white; }
+.player-back { font-size:20px; cursor:pointer; padding:4px; }
+.player-ptitle { flex:1; text-align:center; font-size:13px; font-weight:600; }
+.player-share { font-size:18px; cursor:pointer; }
+.player-video { flex:0 0 auto; height:240px; background:linear-gradient(135deg,#3a2a5a,#2a4a5a); display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; }
+.player-avatar { font-size:48px; }
+.player-cname { color:white; font-family:'Zen Maru Gothic',sans-serif; font-size:16px; font-weight:700; margin-top:4px; }
+.player-date { color:rgba(255,255,255,0.5); font-size:11px; margin-top:2px; }
+.player-big-play { width:48px; height:48px; border:3px solid white; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-top:10px; cursor:pointer; transition:transform .2s; }
+.player-big-play:hover { transform:scale(1.1); }
+.player-big-play::after { content:''; border-left:16px solid white; border-top:10px solid transparent; border-bottom:10px solid transparent; margin-left:4px; }
+.player-progress { display:flex; align-items:center; gap:8px; padding:10px 16px; color:rgba(255,255,255,0.5); font-size:10px; }
+.progress-bar { flex:1; height:4px; background:rgba(255,255,255,0.15); border-radius:2px; overflow:hidden; }
+.progress-fill { width:43%; height:100%; background:var(--coral); border-radius:2px; transition:width .3s; }
+.player-transcript { margin:0 14px 10px; background:rgba(255,255,255,0.08); border-radius:var(--radius-md); padding:12px; }
+.transcript-label { font-size:10px; color:rgba(255,255,255,0.4); font-weight:600; margin-bottom:4px; }
+.transcript-text { font-size:13px; color:rgba(255,255,255,0.85); line-height:1.6; font-family:'Zen Maru Gothic',sans-serif; }
+.player-reactions { padding:0 14px 8px; display:flex; gap:8px; flex-wrap:wrap; }
+.stamp-btn { width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.1); border:none; font-size:20px; cursor:pointer; transition:all .2s; }
+.stamp-btn:hover { background:rgba(255,255,255,0.2); transform:scale(1.15); }
+.stamp-btn.selected { background:var(--yellow); transform:scale(1.15); }
+.player-actions { padding:0 14px 14px; display:flex; gap:8px; }
+.paction-btn { flex:1; padding:10px; border:none; border-radius:var(--radius-md); font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; }
+.btn-comment { background:rgba(255,255,255,0.12); color:white; }
+.btn-family { background:var(--teal); color:white; }
+.btn-question { background:var(--yellow); color:var(--navy); }
+
+/* ═══ SCREEN 6: 家族招待 ═══ */
+.invite-header { padding:40px 20px 16px; background:linear-gradient(135deg,var(--teal),#3aa8a8); color:white; text-align:center; }
+.invite-title { font-family:'Zen Maru Gothic',sans-serif; font-size:20px; font-weight:900; }
+.invite-sub { font-size:12px; opacity:.8; margin-top:4px; }
+.invite-body { padding:16px; }
+.invite-count { text-align:center; margin-bottom:14px; font-size:12px; color:var(--text-mid); }
+.invite-count strong { color:var(--coral); font-size:16px; }
+.invite-card { background:white; border-radius:var(--radius-md); padding:14px; margin-bottom:10px; box-shadow:var(--shadow-soft); display:flex; align-items:center; gap:10px; }
+.invite-card .avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.invite-card .info { flex:1; }
+.invite-card .info .name { font-size:13px; font-weight:700; }
+.invite-card .info .role { font-size:10px; color:var(--text-light); }
+.invite-card .status-badge { padding:3px 8px; border-radius:8px; font-size:10px; font-weight:700; }
+.status-badge.active { background:#e8f5e9; color:#2e7d32; }
+.status-badge.pending { background:#fff3e0; color:#e65100; }
+.invite-btn { width:100%; padding:14px; border:2px dashed var(--teal); background:transparent; border-radius:var(--radius-md); color:var(--teal); font-size:13px; font-weight:700; cursor:pointer; margin-bottom:10px; transition:all .2s; }
+.invite-btn:hover { background:rgba(74,193,193,0.1); }
+.grandparent-link { background:white; border-radius:var(--radius-md); padding:14px; box-shadow:var(--shadow-soft); text-align:center; }
+.grandparent-link h4 { font-size:13px; color:var(--navy); margin-bottom:8px; }
+.link-box { background:var(--cream); border-radius:8px; padding:8px; font-size:10px; color:var(--text-mid); word-break:break-all; margin-bottom:8px; }
+.copy-btn { padding:8px 20px; background:var(--coral); color:white; border:none; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; }
+
+/* ═══ SCREEN 7: 祖父母ビューア ═══ */
+.grandparent-screen { max-width:600px; margin:0 auto; }
+.gp-header { background:white; border-radius:var(--radius-lg); padding:30px; text-align:center; box-shadow:var(--shadow-med); margin-bottom:20px; }
+.gp-header h1 { font-family:'Zen Maru Gothic',sans-serif; font-size:24px; color:var(--navy); }
+.gp-header p { font-size:14px; color:var(--text-mid); margin-top:6px; }
+.gp-video-card { background:white; border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-med); margin-bottom:20px; }
+.gp-video-area { height:280px; background:linear-gradient(135deg,#fce4ec,#e8f4f8); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; }
+.gp-play { width:80px; height:80px; background:var(--coral); border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(242,92,120,0.4); transition:transform .2s; }
+.gp-play:hover { transform:scale(1.1); }
+.gp-play::after { content:''; border-left:28px solid white; border-top:16px solid transparent; border-bottom:16px solid transparent; margin-left:6px; }
+.gp-avatar { font-size:60px; margin-bottom:10px; }
+.gp-video-info { padding:20px; text-align:center; }
+.gp-video-info h2 { font-family:'Zen Maru Gothic',sans-serif; font-size:20px; color:var(--navy); }
+.gp-video-info p { font-size:14px; color:var(--text-mid); margin-top:4px; line-height:1.6; }
+.gp-request { background:white; border-radius:var(--radius-lg); padding:24px; box-shadow:var(--shadow-med); text-align:center; }
+.gp-request h3 { font-family:'Zen Maru Gothic',sans-serif; font-size:18px; color:var(--navy); margin-bottom:10px; }
+.gp-request-btn { padding:14px 30px; background:var(--yellow); color:var(--navy); border:none; border-radius:30px; font-size:16px; font-weight:700; cursor:pointer; font-family:'Zen Maru Gothic',sans-serif; transition:transform .2s; }
+.gp-request-btn:hover { transform:scale(1.05); }
+
+/* ═══ SCREEN 8: 成長ダイジェスト ═══ */
+.digest-header { padding:40px 20px 16px; background:linear-gradient(135deg,var(--teal),#3aa8a8); color:white; text-align:center; position:relative; overflow:hidden; }
+.digest-header::after { content:''; position:absolute; top:-40px; right:-40px; width:120px; height:120px; background:rgba(255,255,255,0.1); border-radius:50%; }
+.digest-title { font-family:'Zen Maru Gothic',sans-serif; font-size:18px; font-weight:900; }
+.digest-sub { font-size:11px; opacity:.8; margin-top:4px; }
+.stats-row { display:flex; gap:10px; margin-bottom:12px; padding:0 16px; }
+.stat-card { flex:1; background:white; border-radius:var(--radius-sm); padding:12px; text-align:center; box-shadow:var(--shadow-soft); }
+.stat-number { font-size:24px; font-weight:900; color:var(--navy); }
+.stat-unit { font-size:12px; }
+.stat-label { font-size:10px; color:var(--text-light); margin-top:2px; }
+.stat-change { font-size:10px; color:var(--teal); font-weight:600; margin-top:2px; }
+.digest-card { background:white; border-radius:var(--radius-md); padding:16px; margin:0 16px 10px; box-shadow:var(--shadow-soft); }
+.digest-card-label { font-size:11px; font-weight:700; color:var(--teal); letter-spacing:1px; margin-bottom:10px; }
+.vocab-chart { display:flex; align-items:flex-end; gap:6px; height:90px; padding:8px 0; }
+.vocab-bar-group { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+.vocab-bar { width:100%; border-radius:5px 5px 2px 2px; }
+.vocab-month { font-size:9px; color:var(--text-light); font-weight:600; }
+.vocab-value { font-size:9px; color:var(--text-mid); font-weight:700; }
+
+/* Radar chart (CSS) */
+.radar-wrap { display:flex; justify-content:center; padding:10px 0; }
+.radar-chart { width:160px; height:160px; position:relative; }
+.radar-bg { position:absolute; inset:0; }
+.radar-bg svg { width:100%; height:100%; }
+.radar-label { position:absolute; font-size:10px; font-weight:700; color:var(--text-dark); }
+.radar-label.top { top:-4px; left:50%; transform:translateX(-50%); }
+.radar-label.right { right:-20px; top:50%; transform:translateY(-50%); }
+.radar-label.bottom { bottom:-4px; left:50%; transform:translateX(-50%); }
+.radar-label.left { left:-20px; top:50%; transform:translateY(-50%); }
+
+/* Badge grid */
+.badge-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.badge-item { text-align:center; padding:10px 6px; border-radius:var(--radius-sm); background:var(--cream); }
+.badge-item.locked { opacity:.4; }
+.badge-icon { font-size:24px; margin-bottom:3px; }
+.badge-name { font-size:9px; font-weight:600; line-height:1.3; }
+.badge-date { font-size:8px; color:var(--text-light); margin-top:2px; }
+
+/* Timeline */
+.timeline { padding:0 4px; }
+.timeline-item { display:flex; gap:10px; padding-bottom:14px; position:relative; }
+.timeline-item::before { content:''; position:absolute; left:15px; top:26px; bottom:0; width:2px; background:#eee; }
+.timeline-item:last-child::before { display:none; }
+.timeline-dot { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; z-index:1; }
+.timeline-dot.coral { background:#fce4ec; }
+.timeline-dot.teal { background:#e0f7fa; }
+.timeline-dot.yellow { background:#fff8e1; }
+.timeline-content h4 { font-size:12px; font-weight:700; color:var(--text-dark); }
+.timeline-content p { font-size:10px; color:var(--text-light); margin-top:1px; }
+
+/* ═══ SCREEN 9: 週末レポート ═══ */
+.report-header { padding:40px 20px 16px; background:linear-gradient(135deg,var(--coral),var(--coral-light)); color:white; text-align:center; }
+.report-title { font-family:'Zen Maru Gothic',sans-serif; font-size:18px; font-weight:900; }
+.report-sub { font-size:11px; opacity:.8; margin-top:4px; }
+.report-section { margin:0 16px 10px; background:white; border-radius:var(--radius-md); padding:14px; box-shadow:var(--shadow-soft); }
+.report-section-title { font-size:13px; font-weight:700; margin-bottom:10px; }
+.report-section-title.coral { color:var(--coral); }
+.report-section-title.navy { color:var(--navy); }
+.report-section-title.teal { color:var(--teal); }
+.best-video { display:flex; align-items:center; gap:12px; }
+.best-thumb { width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg,#fce4ec,#e8f4f8); display:flex; align-items:center; justify-content:center; font-size:24px; }
+.best-info .day { font-size:10px; color:var(--text-light); }
+.best-info .quote { font-family:'Zen Maru Gothic',sans-serif; font-size:13px; font-weight:700; color:var(--navy); margin-top:2px; }
+.best-info .tag { font-size:10px; color:var(--coral); font-weight:600; margin-top:2px; }
+.mood-row { display:flex; justify-content:space-around; padding:8px 0; }
+.mood-item { text-align:center; }
+.mood-emoji { font-size:28px; }
+.mood-day { font-size:10px; color:var(--text-light); font-weight:600; margin-top:2px; }
+.praise-item { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid #f5f5f5; }
+.praise-item:last-child { border-bottom:none; }
+.praise-icon { width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.praise-icon.teal-bg { background:#e0f7fa; }
+.praise-icon.yellow-bg { background:#fff8e1; }
+.praise-icon.coral-bg { background:#fce4ec; }
+.praise-text { font-size:12px; color:var(--text-dark); line-height:1.5; }
+
+/* ═══ SCREEN 10: 管理ダッシュボード ═══ */
+.dashboard { background:var(--cream); min-height:600px; }
+.dash-header { background:white; padding:16px 24px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between; }
+.dash-header h2 { font-family:'Zen Maru Gothic',sans-serif; font-size:18px; color:var(--navy); }
+.dash-header .dash-meta { font-size:11px; color:var(--text-light); }
+.dash-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; padding:20px; }
+.dash-card { background:white; border-radius:var(--radius-md); padding:18px; box-shadow:var(--shadow-soft); }
+.dash-card h3 { font-size:13px; font-weight:700; color:var(--navy); margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+.dash-stat-row { display:flex; gap:12px; margin-bottom:8px; }
+.dash-stat { flex:1; text-align:center; padding:10px; background:var(--cream); border-radius:10px; }
+.dash-stat .num { font-size:22px; font-weight:900; color:var(--navy); }
+.dash-stat .lbl { font-size:10px; color:var(--text-light); margin-top:2px; }
+.dash-bar-chart { display:flex; align-items:flex-end; gap:8px; height:80px; padding-top:10px; }
+.dash-bar-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+.dash-bar { width:100%; border-radius:4px 4px 0 0; transition:height .5s; }
+.dash-bar-label { font-size:9px; color:var(--text-light); }
+.alert-item { display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; margin-bottom:6px; }
+.alert-item.warn { background:#fff3e0; }
+.alert-item.info { background:#e3f2fd; }
+.alert-item .alert-icon { font-size:18px; }
+.alert-item .alert-text { font-size:11px; color:var(--text-dark); line-height:1.4; }
+.devrecord-item { padding:10px; border:1px solid #eee; border-radius:10px; margin-bottom:8px; }
+.devrecord-item h4 { font-size:12px; font-weight:700; color:var(--text-dark); margin-bottom:4px; }
+.devrecord-tags { display:flex; flex-wrap:wrap; gap:4px; }
+.devrecord-tag { padding:2px 8px; border-radius:10px; font-size:9px; font-weight:600; }
+.devrecord-tag.vocab { background:#e0f7fa; color:var(--teal); }
+.devrecord-tag.expr { background:#fce4ec; color:var(--coral); }
+.devrecord-tag.think { background:#fff8e1; color:#f59e0b; }
+
+/* ── Utility ── */
+.hidden { display:none !important; }
+.fade-in { animation:fadeIn .4s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes popIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+.premium-only { display:none; }
+body.premium .premium-only { display:block; }
+body.premium .free-only { display:none; }
+body.premium .premium-lock::after { display:none; }
+body.premium .video-card.locked { opacity:1; filter:none; }
+body.premium .video-card.locked::after { display:none; }
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="top-bar">
+  <div class="top-bar-logo">Happ<span>y</span>o</div>
+  <div class="top-bar-right">
+    <div class="premium-toggle" id="premiumToggle">
+      <span class="label" id="freeLabel">Free</span>
+      <div class="toggle-switch" id="toggleSwitch"></div>
+      <span class="label" id="premiumLabel">Premium</span>
+    </div>
+    <div class="top-bar-sub">PROTOTYPE v2.0</div>
+  </div>
+</div>
+
+<!-- Screen Tabs -->
+<div class="screen-tabs">
+  <div class="screen-tab active" data-screen="kids"><span class="tab-icon">🎨</span>むーむ対話</div>
+  <div class="screen-tab" data-screen="talkonly"><span class="tab-icon">💬</span>対話のみ</div>
+  <div class="screen-tab" data-screen="teacher"><span class="tab-icon">👩‍🏫</span>先生管理</div>
+  <div class="screen-tab" data-screen="feed"><span class="tab-icon">📱</span>動画フィード</div>
+  <div class="screen-tab" data-screen="player"><span class="tab-icon">▶️</span>動画再生</div>
+  <div class="screen-tab" data-screen="invite"><span class="tab-icon">👨‍👩‍👧</span>家族招待</div>
+  <div class="screen-tab" data-screen="grandparent"><span class="tab-icon">👴</span>祖父母ビューア</div>
+  <div class="screen-tab" data-screen="digest"><span class="tab-icon">📊</span>成長ダイジェスト</div>
+  <div class="screen-tab" data-screen="report"><span class="tab-icon">📋</span>週末レポート</div>
+  <div class="screen-tab" data-screen="dashboard"><span class="tab-icon">🏫</span>管理ダッシュボード</div>
+</div>
+
+<div class="stage">
+
+<!-- ══════ SCREEN 1: むーむ対話 ══════ -->
+<div class="screen active" id="screen-kids">
+  <div class="device-label">園側タブレット — むーむとの対話・撮影フロー</div>
+  <div class="device-center">
+    <div class="tablet-frame">
+      <div class="tablet-inner">
+        <div class="kids-screen" id="kidsScreen">
+          <div class="deco-cloud dc1"></div>
+          <div class="deco-cloud dc2"></div>
+          <div class="deco-star ds1">⭐</div>
+          <div class="deco-star ds2">✨</div>
+
+          <div class="rec-indicator" id="recIndicator">
+            <div class="rec-dot"></div>REC
+          </div>
+
+          <div class="moomu-wrap" id="moomuWrap">
+            <div class="moomu-body">
+              <div class="moomu-face">
+                <div class="moomu-eyes">
+                  <div class="moomu-eye"></div>
+                  <div class="moomu-eye"></div>
+                </div>
+                <div class="moomu-cheeks">
+                  <div class="moomu-cheek"></div>
+                  <div class="moomu-cheek"></div>
+                </div>
+                <div class="moomu-mouth" id="moomuMouth"></div>
+              </div>
+            </div>
+            <div class="moomu-name">むーむ</div>
+          </div>
+
+          <div class="speech-bubble" id="speechBubble">
+            <div class="speech-text" id="speechText">
+              あそぼう！🌈
+            </div>
+            <div class="voice-waves hidden" id="voiceWaves">
+              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            </div>
+            <div class="timeout-spinner" id="timeoutSpinner">
+              <div class="spinner-dots">
+                <div class="spinner-dot"></div><div class="spinner-dot"></div><div class="spinner-dot"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="demo-controls">
+            <button class="demo-btn active" onclick="setKidsStep('idle')">待機</button>
+            <button class="demo-btn" onclick="setKidsStep('recognize')">認識</button>
+            <button class="demo-btn" onclick="setKidsStep('talk')">対話</button>
+            <button class="demo-btn" onclick="setKidsStep('timeout')">無反応</button>
+            <button class="demo-btn" onclick="setKidsStep('record')">撮影</button>
+            <button class="demo-btn" onclick="setKidsStep('done')">完了</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SCREEN 2: 対話のみモード ══════ -->
+<div class="screen" id="screen-talkonly">
+  <div class="device-label">園側タブレット — 対話のみモード（撮影拒否家庭向け）</div>
+  <div class="device-center">
+    <div class="tablet-frame">
+      <div class="tablet-inner">
+        <div class="kids-screen">
+          <div class="deco-cloud dc1"></div>
+          <div class="deco-cloud dc2"></div>
+          <div class="deco-star ds1">⭐</div>
+          <div class="deco-star ds2">✨</div>
+          <div class="talkonly-badge">💬 おはなしモード</div>
+
+          <div class="moomu-wrap" style="top:25%">
+            <div class="moomu-body">
+              <div class="moomu-face">
+                <div class="moomu-eyes"><div class="moomu-eye"></div><div class="moomu-eye"></div></div>
+                <div class="moomu-cheeks"><div class="moomu-cheek"></div><div class="moomu-cheek"></div></div>
+                <div class="moomu-mouth open"></div>
+              </div>
+            </div>
+            <div class="moomu-name">むーむ</div>
+          </div>
+
+          <div class="speech-bubble" style="bottom:30%">
+            <div class="speech-text">
+              きょうのおひるごはん<br><span class="hl">なにたべた？</span> 🍙
+            </div>
+            <div class="voice-waves">
+              <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            </div>
+          </div>
+
+          <div style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.9);padding:8px 20px;border-radius:20px;font-size:11px;color:var(--text-mid);text-align:center;">
+            📷 撮影・配信はされません<br>むーむとのおはなしを楽しむモードです
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SCREEN 3: 先生管理画面 ══════ -->
+<div class="screen" id="screen-teacher">
+  <div class="device-label">先生用タブレット — 承認ワークフロー・話題設定</div>
+  <div class="device-center">
+    <div class="tablet-frame">
+      <div class="tablet-inner">
+        <div class="teacher-screen">
+          <div class="teacher-header">
+            <h2>👩‍🏫 さくら組 管理画面</h2>
+            <p>2026年3月26日（木）— 園児18名</p>
+          </div>
+          <div class="teacher-tabs">
+            <div class="teacher-tab active" onclick="switchTeacherTab(this,'topic')">📝 話題設定</div>
+            <div class="teacher-tab" onclick="switchTeacherTab(this,'approval')">✅ 承認 <span style="background:var(--coral);color:white;padding:1px 5px;border-radius:8px;font-size:9px;margin-left:3px;">3</span></div>
+            <div class="teacher-tab" onclick="switchTeacherTab(this,'checklist')">📋 撮影状況</div>
+          </div>
+          <div class="teacher-body">
+            <!-- Topic Tab -->
+            <div id="teacher-topic">
+              <div class="topic-card">
+                <h3>🎯 きょうの話題をむーむに設定</h3>
+                <input class="topic-input" placeholder="例: きょうのお散歩で見つけたもの" value="きょうのお散歩で見つけたもの">
+                <div class="topic-tags">
+                  <div class="topic-tag selected">🌸 春のおさんぽ</div>
+                  <div class="topic-tag" onclick="this.classList.toggle('selected')">🎨 おえかき</div>
+                  <div class="topic-tag" onclick="this.classList.toggle('selected')">🎵 おうた</div>
+                  <div class="topic-tag" onclick="this.classList.toggle('selected')">🍙 きゅうしょく</div>
+                  <div class="topic-tag" onclick="this.classList.toggle('selected')">👫 おともだち</div>
+                  <div class="topic-tag" onclick="this.classList.toggle('selected')">📖 えほん</div>
+                </div>
+              </div>
+              <div class="topic-card">
+                <h3>⏰ 本日の予定</h3>
+                <div style="font-size:12px;color:var(--text-mid);line-height:1.8;">
+                  ・午前: 近くの公園へお散歩<br>
+                  ・午後: 自由あそび → Happyo撮影タイム（14:00〜）<br>
+                  ・むーむの質問: 「おさんぽでなにをみつけた？」
+                </div>
+              </div>
+            </div>
+            <!-- Approval Tab -->
+            <div id="teacher-approval" class="hidden">
+              <div class="approval-item">
+                <div class="approval-thumb">👧</div>
+                <div class="approval-info">
+                  <div class="approval-name">田中 ゆうちゃん</div>
+                  <div class="approval-time">14:12 撮影</div>
+                </div>
+                <div class="approval-actions">
+                  <button class="approve-btn" onclick="approveVideo(this)">✓ 承認</button>
+                  <button class="retake-btn" onclick="retakeVideo(this)">↻ やり直し</button>
+                </div>
+              </div>
+              <div class="approval-item">
+                <div class="approval-thumb">👦</div>
+                <div class="approval-info">
+                  <div class="approval-name">鈴木 けんちゃん</div>
+                  <div class="approval-time">14:18 撮影</div>
+                  <div class="approval-alert">⚠️ 他のお子さんが映り込んでいます</div>
+                </div>
+                <div class="approval-actions">
+                  <button class="approve-btn" onclick="approveVideo(this)">✓ 承認</button>
+                  <button class="retake-btn" onclick="retakeVideo(this)">↻ やり直し</button>
+                </div>
+              </div>
+              <div class="approval-item">
+                <div class="approval-thumb">👧</div>
+                <div class="approval-info">
+                  <div class="approval-name">佐藤 みくちゃん</div>
+                  <div class="approval-time">14:25 撮影</div>
+                </div>
+                <div class="approval-actions">
+                  <button class="approve-btn" onclick="approveVideo(this)">✓ 承認</button>
+                  <button class="retake-btn" onclick="retakeVideo(this)">↻ やり直し</button>
+                </div>
+              </div>
+              <div class="approval-item" style="opacity:.5">
+                <div class="approval-thumb">👦</div>
+                <div class="approval-info">
+                  <div class="approval-name">高橋 そうたくん</div>
+                  <div class="approval-time">14:08 撮影</div>
+                </div>
+                <div class="approval-actions">
+                  <button class="approve-btn done">承認済</button>
+                </div>
+              </div>
+            </div>
+            <!-- Checklist Tab -->
+            <div id="teacher-checklist" class="hidden">
+              <div style="font-size:11px;color:var(--text-mid);margin-bottom:8px;">撮影済: 8/18名</div>
+              <div class="child-check"><div class="dot done"></div><span class="name">田中 ゆうちゃん</span><span class="status">✅ 承認待ち</span></div>
+              <div class="child-check"><div class="dot done"></div><span class="name">鈴木 けんちゃん</span><span class="status">⚠️ 要確認</span></div>
+              <div class="child-check"><div class="dot done"></div><span class="name">佐藤 みくちゃん</span><span class="status">✅ 承認待ち</span></div>
+              <div class="child-check"><div class="dot done"></div><span class="name">高橋 そうたくん</span><span class="status">✅ 配信済</span></div>
+              <div class="child-check"><div class="dot done"></div><span class="name">伊藤 はなちゃん</span><span class="status">✅ 配信済</span></div>
+              <div class="child-check"><div class="dot done"></div><span class="name">渡辺 りくくん</span><span class="status">✅ 承認待ち</span></div>
+              <div class="child-check"><div class="dot done"></div><span class="name">山本 あおいちゃん</span><span class="status">💬 対話のみ</span></div>
+              <div class="child-check"><div class="dot done"></div><span class="name">中村 こうたくん</span><span class="status">✅ 配信済</span></div>
+              <div class="child-check"><div class="dot pending"></div><span class="name">小林 まいちゃん</span><span class="status">未撮影</span></div>
+              <div class="child-check"><div class="dot pending"></div><span class="name">加藤 たくみくん</span><span class="status">未撮影</span></div>
+              <div class="child-check"><div class="dot pending"></div><span class="name">吉田 さくらちゃん</span><span class="status">未撮影</span></div>
+              <div class="child-check"><div class="dot pending"></div><span class="name">山田 れんくん</span><span class="status">未撮影</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SCREEN 4: 保護者フィード ══════ -->
+<div class="screen" id="screen-feed">
+  <div class="device-label">保護者スマホ — 動画フィード</div>
+  <div class="device-center">
+    <div class="phone-frame">
+      <div class="phone-inner">
+        <div class="phone-notch"></div>
+        <div class="phone-scroll">
+          <div class="parent-header">
+            <div class="parent-greeting">おかえりなさい 👋</div>
+            <div class="parent-title"><span class="child-name">ゆうちゃん</span>の今日</div>
+          </div>
+
+          <div class="notif-banner">🔔 新しい動画が届きました！</div>
+
+          <div class="feed-date">3月26日（木）</div>
+          <div class="video-card" onclick="switchScreen('player')">
+            <div class="video-thumb thumb-g1">
+              <div class="thumb-avatar">👧</div>
+              <div class="thumb-dur">0:30</div>
+              <div class="thumb-new">NEW</div>
+              <div class="thumb-play"></div>
+            </div>
+            <div class="vcard-body">
+              <div class="vcard-title">「おさんぽで おはなみつけたよ！」</div>
+              <div class="vcard-sub">14:42 · むーむとおはなし</div>
+              <div class="vcard-reactions">
+                <div class="reaction-chip" onclick="event.stopPropagation();bumpReaction(this)"><span>😍</span><span class="rcount">3</span></div>
+                <div class="reaction-chip" onclick="event.stopPropagation();bumpReaction(this)"><span>👏</span><span class="rcount">2</span></div>
+              </div>
+              <div class="read-status">✓ おじいちゃん・おばあちゃんが視聴済み</div>
+            </div>
+          </div>
+
+          <div class="feed-date">3月25日（水）</div>
+          <div class="video-card">
+            <div class="video-thumb thumb-g2">
+              <div class="thumb-avatar">👧</div>
+              <div class="thumb-dur">0:28</div>
+              <div class="thumb-play"></div>
+            </div>
+            <div class="vcard-body">
+              <div class="vcard-title">「きょうはおえかきしたの！おはなかいた」</div>
+              <div class="vcard-sub">15:38 · むーむとおはなし</div>
+              <div class="vcard-reactions">
+                <div class="reaction-chip" onclick="bumpReaction(this)"><span>😍</span><span class="rcount">4</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="video-card">
+            <div class="video-thumb thumb-g3">
+              <div class="thumb-avatar">👧</div>
+              <div class="thumb-dur">0:30</div>
+              <div class="thumb-play"></div>
+            </div>
+            <div class="vcard-body">
+              <div class="vcard-title">「せんせいにありがとうっていえたよ！」</div>
+              <div class="vcard-sub">15:35 · むーむとおはなし</div>
+              <div class="vcard-reactions">
+                <div class="reaction-chip" onclick="bumpReaction(this)"><span>😭</span><span class="rcount">5</span></div>
+                <div class="reaction-chip" onclick="bumpReaction(this)"><span>👏</span><span class="rcount">3</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Locked videos (free) -->
+          <div class="feed-date free-only">3月24日（火）</div>
+          <div class="video-card locked free-only">
+            <div class="video-thumb thumb-g1"><div class="thumb-avatar">👧</div></div>
+            <div class="vcard-body"><div class="vcard-title">「ブロックでおうちつくったの！」</div></div>
+          </div>
+
+          <!-- Moomu chat -->
+          <div class="moomu-chat">
+            <div class="moomu-chat-header">
+              <div class="moomu-mini"></div>
+              <span style="font-size:12px;font-weight:700;color:var(--teal);">むーむより</span>
+            </div>
+            <div class="moomu-chat-text">ゆうちゃん、きょうはおさんぽでたくさんお花を見つけたよ！おうちでもお花のお話、聞いてあげてね 🌸</div>
+            <div class="moomu-chat-input premium-lock free-only">
+              <input placeholder="むーむに質問する..." disabled>
+              <button disabled>送信</button>
+            </div>
+            <div class="moomu-chat-input premium-only">
+              <input placeholder="むーむに質問する...">
+              <button>送信</button>
+            </div>
+          </div>
+
+          <div style="height:80px;"></div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-item active"><span class="nav-icon">🏠</span><span>ホーム</span></div>
+          <div class="nav-item" onclick="switchScreen('digest')"><span class="nav-icon">📊</span><span>せいちょう</span></div>
+          <div class="nav-item" onclick="switchScreen('invite')"><span class="nav-icon">👨‍👩‍👧</span><span>かぞく</span></div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span><span>せってい</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SCREEN 5: 動画再生 ══════ -->
+<div class="screen" id="screen-player">
+  <div class="device-label">保護者スマホ — 動画再生・リアクション</div>
+  <div class="device-center">
+    <div class="phone-frame">
+      <div class="phone-inner">
+        <div class="phone-notch"></div>
+        <div class="player-screen">
+          <div class="player-top">
+            <div class="player-back" onclick="switchScreen('feed')">←</div>
+            <div class="player-ptitle">3月26日のおはなし</div>
+            <div class="player-share">↗</div>
+          </div>
+          <div class="player-video">
+            <div class="player-avatar">👧</div>
+            <div class="player-cname">ゆうちゃん</div>
+            <div class="player-date">2026年3月26日 14:42</div>
+            <div class="player-big-play" onclick="animatePlay(this)"></div>
+          </div>
+          <div class="player-progress">
+            <span>0:13</span>
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <span>0:30</span>
+          </div>
+          <div class="player-transcript">
+            <div class="transcript-label">📝 むーむとのおはなし</div>
+            <div class="transcript-text">「きょうね、おさんぽで<br>ピンクのおはな みつけたの！<br>せんせいに おしえてあげたよ✨」</div>
+          </div>
+          <div class="player-reactions">
+            <button class="stamp-btn" onclick="toggleStamp(this)">😍</button>
+            <button class="stamp-btn" onclick="toggleStamp(this)">👏</button>
+            <button class="stamp-btn" onclick="toggleStamp(this)">💕</button>
+            <button class="stamp-btn" onclick="toggleStamp(this)">😭</button>
+            <button class="stamp-btn" onclick="toggleStamp(this)">🌟</button>
+          </div>
+          <div class="player-actions">
+            <button class="paction-btn btn-comment">💬 コメント</button>
+            <button class="paction-btn btn-family" onclick="switchScreen('invite')">👨‍👩‍👧 共有</button>
+            <button class="paction-btn btn-question premium-only">❓ 質問</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SCREEN 6: 家族招待 ══════ -->
+<div class="screen" id="screen-invite">
+  <div class="device-label">保護者スマホ — 家族招待・共有</div>
+  <div class="device-center">
+    <div class="phone-frame">
+      <div class="phone-inner">
+        <div class="phone-notch"></div>
+        <div class="phone-scroll">
+          <div class="invite-header">
+            <div style="font-size:28px;margin-bottom:4px;">👨‍👩‍👧‍👦</div>
+            <div class="invite-title">家族招待</div>
+            <div class="invite-sub">ゆうちゃんの動画をみんなで見よう</div>
+          </div>
+          <div class="invite-body">
+            <div class="invite-count free-only">招待枠: <strong>1</strong> / 2名 残り</div>
+            <div class="invite-count premium-only">招待枠: <strong>無制限</strong> ✨</div>
+
+            <div class="invite-card">
+              <div class="avatar" style="background:#e0f7fa;">👴</div>
+              <div class="info">
+                <div class="name">おじいちゃん（田中 義夫）</div>
+                <div class="role">Webビューアで視聴中</div>
+              </div>
+              <div class="status-badge active">参加中</div>
+            </div>
+            <div class="invite-card">
+              <div class="avatar" style="background:#fce4ec;">👵</div>
+              <div class="info">
+                <div class="name">おばあちゃん（田中 幸子）</div>
+                <div class="role">招待メール送信済み</div>
+              </div>
+              <div class="status-badge pending">招待中</div>
+            </div>
+
+            <button class="invite-btn" onclick="this.textContent='✓ 招待リンクをコピーしました！';this.style.borderColor='var(--teal)';this.style.color='var(--teal)'">+ 家族を招待する</button>
+
+            <div class="grandparent-link">
+              <h4>👴 祖父母向けリンク（アプリ不要）</h4>
+              <div class="link-box">https://happyo.app/view/family/abc123xyz</div>
+              <button class="copy-btn" onclick="this.textContent='✓ コピー済み！'">リンクをコピー</button>
+            </div>
+          </div>
+
+          <div style="height:80px;"></div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item" onclick="switchScreen('feed')"><span class="nav-icon">🏠</span><span>ホーム</span></div>
+          <div class="nav-item" onclick="switchScreen('digest')"><span class="nav-icon">📊</span><span>せいちょう</span></div>
+          <div class="nav-item active"><span class="nav-icon">👨‍👩‍👧</span><span>かぞく</span></div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span><span>せってい</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SCREEN 7: 祖父母ビューア ══════ -->
+<div class="screen" id="screen-grandparent">
+  <div class="device-label">祖父母向け Webビューア（ブラウザ・アプリ不要）</div>
+  <div class="grandparent-screen">
+    <div class="gp-header">
+      <div style="font-size:12px;color:var(--teal);font-weight:600;margin-bottom:4px;">Happyo ファミリー</div>
+      <h1>ゆうちゃんの今日のおはなし</h1>
+      <p>田中ゆう（さくら組）の保護者より共有されています</p>
+    </div>
+    <div class="gp-video-card">
+      <div class="gp-video-area" onclick="this.querySelector('.gp-play').style.display='none';this.querySelector('.gp-avatar').style.fontSize='80px'">
+        <div class="gp-avatar">👧</div>
+        <div class="gp-play"></div>
+      </div>
+      <div class="gp-video-info">
+        <h2>「おさんぽで おはなみつけたよ！」</h2>
+        <p>2026年3月26日（木）14:42<br>むーむとのおはなし（30秒）</p>
+      </div>
+    </div>
+    <div class="gp-request premium-only">
+      <h3>🎤 ゆうちゃんに聞きたいことはありますか？</h3>
+      <p style="font-size:14px;color:var(--text-mid);margin-bottom:14px;">リクエストすると、むーむがゆうちゃんに<br>「おじいちゃんが聞きたいって言ってるよ！」と伝えます</p>
+      <button class="gp-request-btn" onclick="this.textContent='✓ リクエストを送りました！';this.style.background='var(--teal)';this.style.color='white'">リクエストを送る</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SCREEN 8: 成長ダイジェスト ══════ -->
+<div class="screen" id="screen-digest">
+  <div class="device-label">保護者スマホ — AI成長ダイジェスト（プレミアム）</div>
+  <div class="device-center">
+    <div class="phone-frame">
+      <div class="phone-inner">
+        <div class="phone-notch"></div>
+        <div class="phone-scroll">
+          <div class="digest-header">
+            <div style="font-size:28px;margin-bottom:4px;">🌱</div>
+            <div class="digest-title">ゆうちゃんの成長ログ</div>
+            <div class="digest-sub">AIが分析した成長の軌跡</div>
+          </div>
+
+          <div style="padding-top:12px;">
+            <div class="stats-row">
+              <div class="stat-card">
+                <div class="stat-number">47<span class="stat-unit">回</span></div>
+                <div class="stat-label">おはなし回数</div>
+                <div class="stat-change">↑ 先月比 +12</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number">156<span class="stat-unit">語</span></div>
+                <div class="stat-label">使用語彙数</div>
+                <div class="stat-change">↑ 先月比 +23</div>
+              </div>
+            </div>
+
+            <div class="digest-card">
+              <div class="digest-card-label">📈 語彙の変化（6ヶ月）</div>
+              <div class="vocab-chart">
+                <div class="vocab-bar-group"><div class="vocab-value">68</div><div class="vocab-bar" style="height:30px;background:var(--teal-light)"></div><div class="vocab-month">10月</div></div>
+                <div class="vocab-bar-group"><div class="vocab-value">82</div><div class="vocab-bar" style="height:38px;background:var(--teal-light)"></div><div class="vocab-month">11月</div></div>
+                <div class="vocab-bar-group"><div class="vocab-value">95</div><div class="vocab-bar" style="height:44px;background:var(--teal-light)"></div><div class="vocab-month">12月</div></div>
+                <div class="vocab-bar-group"><div class="vocab-value">110</div><div class="vocab-bar" style="height:52px;background:var(--teal)"></div><div class="vocab-month">1月</div></div>
+                <div class="vocab-bar-group"><div class="vocab-value">133</div><div class="vocab-bar" style="height:62px;background:var(--teal)"></div><div class="vocab-month">2月</div></div>
+                <div class="vocab-bar-group"><div class="vocab-value">156</div><div class="vocab-bar" style="height:74px;background:var(--coral)"></div><div class="vocab-month">3月</div></div>
+              </div>
+            </div>
+
+            <div class="digest-card">
+              <div class="digest-card-label">🎯 表現力チャート</div>
+              <div class="radar-wrap">
+                <svg width="200" height="180" viewBox="0 0 200 180">
+                  <!-- Grid -->
+                  <polygon points="100,10 180,55 180,125 100,170 20,125 20,55" fill="none" stroke="#eee" stroke-width="1"/>
+                  <polygon points="100,40 155,67 155,113 100,140 45,113 45,67" fill="none" stroke="#eee" stroke-width="1"/>
+                  <polygon points="100,70 130,82 130,98 100,110 70,98 70,82" fill="none" stroke="#eee" stroke-width="1"/>
+                  <!-- Data -->
+                  <polygon points="100,22 168,62 150,130 100,155 40,110 35,55" fill="rgba(74,193,193,0.2)" stroke="var(--teal)" stroke-width="2"/>
+                  <!-- Labels -->
+                  <text x="100" y="6" text-anchor="middle" font-size="10" font-weight="700" fill="#2a2a3a">語彙力</text>
+                  <text x="192" y="55" text-anchor="start" font-size="10" font-weight="700" fill="#2a2a3a">表現力</text>
+                  <text x="192" y="130" text-anchor="start" font-size="10" font-weight="700" fill="#2a2a3a">思考力</text>
+                  <text x="100" y="185" text-anchor="middle" font-size="10" font-weight="700" fill="#2a2a3a">社会性</text>
+                  <text x="5" y="130" text-anchor="start" font-size="10" font-weight="700" fill="#2a2a3a">感情</text>
+                  <text x="5" y="55" text-anchor="start" font-size="10" font-weight="700" fill="#2a2a3a">積極性</text>
+                </svg>
+              </div>
+            </div>
+
+            <div class="digest-card">
+              <div class="digest-card-label">🏅 はじめてのバッジ</div>
+              <div class="badge-grid">
+                <div class="badge-item"><div class="badge-icon">🗣️</div><div class="badge-name">はじめての<br>おはなし</div><div class="badge-date">10/15</div></div>
+                <div class="badge-item"><div class="badge-icon">🙏</div><div class="badge-name">ありがとうが<br>いえた日</div><div class="badge-date">12/3</div></div>
+                <div class="badge-item"><div class="badge-icon">📖</div><div class="badge-name">おはなし<br>3文以上</div><div class="badge-date">1/22</div></div>
+                <div class="badge-item"><div class="badge-icon">😊</div><div class="badge-name">おともだちの<br>名前が言えた</div><div class="badge-date">2/8</div></div>
+                <div class="badge-item"><div class="badge-icon">🌈</div><div class="badge-name">気持ちを<br>言葉にできた</div><div class="badge-date">3/10</div></div>
+                <div class="badge-item locked"><div class="badge-icon">🎵</div><div class="badge-name">おうたを<br>うたえた</div><div class="badge-date">???</div></div>
+              </div>
+            </div>
+
+            <div class="digest-card">
+              <div class="digest-card-label">📅 成長の軌跡</div>
+              <div class="timeline">
+                <div class="timeline-item"><div class="timeline-dot coral">🌸</div><div class="timeline-content"><h4>3月: 感情表現が豊かに</h4><p>「うれしい」「ちょっとかなしい」など感情の言語化が進歩</p></div></div>
+                <div class="timeline-item"><div class="timeline-dot teal">👫</div><div class="timeline-content"><h4>2月: 友達の名前を使い始める</h4><p>「みくちゃんと〜」と社会的な会話が増加</p></div></div>
+                <div class="timeline-item"><div class="timeline-dot yellow">📖</div><div class="timeline-content"><h4>1月: 3文以上の長い話ができるように</h4><p>「きょうね、〜して、〜したの」と連続した表現に成長</p></div></div>
+              </div>
+            </div>
+
+            <div class="digest-card">
+              <div class="digest-card-label">💡 AIからのメッセージ</div>
+              <div style="font-size:12px;color:var(--text-dark);line-height:1.7;font-family:'Zen Maru Gothic',sans-serif;">
+                ゆうちゃんは最近、<strong style="color:var(--teal)">お友達の名前</strong>を使って話すことが増えました。社会性の発達が見られます。また「<strong style="color:var(--coral)">うれしい</strong>」「<strong style="color:var(--coral)">たのしい</strong>」など<strong>感情を表す言葉</strong>のバリエーションも豊かになっています 🌟
+              </div>
+            </div>
+
+            <div style="height:80px;"></div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item" onclick="switchScreen('feed')"><span class="nav-icon">🏠</span><span>ホーム</span></div>
+          <div class="nav-item active"><span class="nav-icon">📊</span><span>せいちょう</span></div>
+          <div class="nav-item" onclick="switchScreen('invite')"><span class="nav-icon">👨‍👩‍👧</span><span>かぞく</span></div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span><span>せってい</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SCREEN 9: 週末レポート ══════ -->
+<div class="screen" id="screen-report">
+  <div class="device-label">保護者スマホ — 週末ファミリー・トーク・レポート</div>
+  <div class="device-center">
+    <div class="phone-frame">
+      <div class="phone-inner">
+        <div class="phone-notch"></div>
+        <div class="phone-scroll">
+          <div class="report-header">
+            <div style="font-size:28px;margin-bottom:4px;">📋</div>
+            <div class="report-title">今週のレポート</div>
+            <div class="report-sub">3月23日（月）〜 3月27日（金）</div>
+          </div>
+
+          <div style="padding-top:12px;">
+            <div class="report-section">
+              <div class="report-section-title coral">🏆 今週のベスト発表</div>
+              <div class="best-video">
+                <div class="best-thumb">👧</div>
+                <div class="best-info">
+                  <div class="day">3月26日（木）</div>
+                  <div class="quote">「おさんぽで おはなみつけたよ！」</div>
+                  <div class="tag">家族の反応数 No.1 🎉</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="report-section">
+              <div class="report-section-title navy">📊 今週のきもち</div>
+              <div class="mood-row">
+                <div class="mood-item"><div class="mood-emoji">😊</div><div class="mood-day">月</div></div>
+                <div class="mood-item"><div class="mood-emoji">😆</div><div class="mood-day">火</div></div>
+                <div class="mood-item"><div class="mood-emoji">😊</div><div class="mood-day">水</div></div>
+                <div class="mood-item"><div class="mood-emoji">🥰</div><div class="mood-day">木</div></div>
+                <div class="mood-item"><div class="mood-emoji">😄</div><div class="mood-day">金</div></div>
+              </div>
+              <div style="font-size:10px;color:var(--text-mid);text-align:center;margin-top:4px;">今週はずっとニコニコ！安定した1週間でした 🌈</div>
+            </div>
+
+            <div class="report-section">
+              <div class="report-section-title teal">💬 週末はこれを話題にしてみて！</div>
+              <div class="praise-item">
+                <div class="praise-icon teal-bg">🌸</div>
+                <div class="praise-text"><strong>おさんぽで見つけたお花</strong>のこと、聞いてみてください。ピンクのお花がお気に入りだそうです。</div>
+              </div>
+              <div class="praise-item">
+                <div class="praise-icon yellow-bg">🏖️</div>
+                <div class="praise-text"><strong>おすなばのおやま</strong>のこと、聞いてみてください。みくちゃんと協力して大きなお山を作ったそうです。</div>
+              </div>
+              <div class="praise-item">
+                <div class="praise-icon coral-bg">🎨</div>
+                <div class="praise-text">おえかきで<strong>お花の絵</strong>を描きました。「誰にあげるの？」と聞いてみると嬉しいかもしれません。</div>
+              </div>
+            </div>
+
+            <div class="report-section" style="text-align:center;background:linear-gradient(135deg,#fff0f3,#fef9f0);">
+              <div style="font-size:28px;margin-bottom:6px;">🤗</div>
+              <div style="font-family:'Zen Maru Gothic',sans-serif;font-size:14px;font-weight:700;color:var(--navy);line-height:1.6;">
+                「Happyo見たよ！<br>がんばったね！」
+              </div>
+              <div style="font-size:11px;color:var(--text-mid);margin-top:6px;">この一言が、ゆうちゃんの自信になります</div>
+            </div>
+
+            <div style="height:80px;"></div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-item" onclick="switchScreen('feed')"><span class="nav-icon">🏠</span><span>ホーム</span></div>
+          <div class="nav-item"><span class="nav-icon">📊</span><span>せいちょう</span></div>
+          <div class="nav-item" onclick="switchScreen('invite')"><span class="nav-icon">👨‍👩‍👧</span><span>かぞく</span></div>
+          <div class="nav-item"><span class="nav-icon">⚙️</span><span>せってい</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SCREEN 10: 管理ダッシュボード ══════ -->
+<div class="screen" id="screen-dashboard">
+  <div class="device-label">管理ダッシュボード（園・自治体向け）</div>
+  <div class="dashboard">
+    <div class="dash-header">
+      <h2>🏫 ひまわり保育園 ダッシュボード</h2>
+      <div class="dash-meta">2026年3月 · さくら組・たんぽぽ組・すみれ組</div>
+    </div>
+    <div class="dash-grid">
+      <div class="dash-card">
+        <h3>📊 利用状況（今月）</h3>
+        <div class="dash-stat-row">
+          <div class="dash-stat"><div class="num">89<span style="font-size:12px">%</span></div><div class="lbl">園児利用率</div></div>
+          <div class="dash-stat"><div class="num">432</div><div class="lbl">動画数</div></div>
+          <div class="dash-stat"><div class="num">94<span style="font-size:12px">%</span></div><div class="lbl">保護者視聴率</div></div>
+        </div>
+      </div>
+
+      <div class="dash-card">
+        <h3>👀 保護者の閲覧率（週別）</h3>
+        <div class="dash-bar-chart">
+          <div class="dash-bar-item"><div class="dash-bar" style="height:50px;background:var(--teal-light)"></div><div class="dash-bar-label">W1</div></div>
+          <div class="dash-bar-item"><div class="dash-bar" style="height:58px;background:var(--teal-light)"></div><div class="dash-bar-label">W2</div></div>
+          <div class="dash-bar-item"><div class="dash-bar" style="height:65px;background:var(--teal)"></div><div class="dash-bar-label">W3</div></div>
+          <div class="dash-bar-item"><div class="dash-bar" style="height:72px;background:var(--coral)"></div><div class="dash-bar-label">W4</div></div>
+        </div>
+        <div style="font-size:10px;color:var(--text-light);margin-top:6px;">リアクション率: 67% ↑</div>
+      </div>
+
+      <div class="dash-card">
+        <h3>⚠️ 気づきアラート</h3>
+        <div class="alert-item warn">
+          <div class="alert-icon">😟</div>
+          <div class="alert-text"><strong>加藤 たくみくん</strong>の発話量が先週比30%減少しています。情緒面の変化の可能性があります。</div>
+        </div>
+        <div class="alert-item info">
+          <div class="alert-icon">🎉</div>
+          <div class="alert-text"><strong>田中 ゆうちゃん</strong>が初めて感情を言語化しました（「ちょっとさみしかった」）。</div>
+        </div>
+        <div class="alert-item info">
+          <div class="alert-icon">👫</div>
+          <div class="alert-text"><strong>佐藤 みくちゃん</strong>と<strong>田中 ゆうちゃん</strong>が互いの名前を頻繁に使用。友人関係の深化が見られます。</div>
+        </div>
+      </div>
+
+      <div class="dash-card">
+        <h3>📝 発達記録（自動生成プレビュー）</h3>
+        <div class="devrecord-item">
+          <h4>👧 田中 ゆう（4歳3ヶ月）</h4>
+          <div class="devrecord-tags">
+            <span class="devrecord-tag vocab">語彙 156語 ↑</span>
+            <span class="devrecord-tag expr">表現力 A</span>
+            <span class="devrecord-tag think">思考力 B+</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-mid);margin-top:6px;line-height:1.5;">
+            3月は感情語彙の使用が顕著に増加。「うれしい」「かなしい」に加え「ちょっとさみしい」等の微妙な感情表現も見られるように。社会的な対話（友人名の使用）も増え、言語発達は年齢相応以上。
+          </div>
+        </div>
+        <div class="devrecord-item">
+          <h4>👦 鈴木 けん（4歳5ヶ月）</h4>
+          <div class="devrecord-tags">
+            <span class="devrecord-tag vocab">語彙 128語 →</span>
+            <span class="devrecord-tag expr">表現力 B</span>
+            <span class="devrecord-tag think">思考力 A</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-mid);margin-top:6px;line-height:1.5;">
+            論理的な説明が得意。「〜だから〜した」という因果関係の表現が多い。語彙数は横ばいだが、使用語彙の質的な深まりが見られる。
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:10px;">
+          <button style="padding:8px 20px;background:var(--navy);color:white;border:none;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;">📄 児童票の下書きを生成</button>
+        </div>
+      </div>
+
+      <div class="dash-card">
+        <h3>📈 クラス別利用率</h3>
+        <div style="font-size:12px;line-height:2;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:70px;font-weight:600;">さくら組</span>
+            <div style="flex:1;height:16px;background:#eee;border-radius:8px;overflow:hidden;"><div style="width:92%;height:100%;background:var(--teal);border-radius:8px;"></div></div>
+            <span style="font-weight:700;color:var(--teal);">92%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:70px;font-weight:600;">たんぽぽ組</span>
+            <div style="flex:1;height:16px;background:#eee;border-radius:8px;overflow:hidden;"><div style="width:85%;height:100%;background:var(--teal-light);border-radius:8px;"></div></div>
+            <span style="font-weight:700;color:var(--teal);">85%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:70px;font-weight:600;">すみれ組</span>
+            <div style="flex:1;height:16px;background:#eee;border-radius:8px;overflow:hidden;"><div style="width:78%;height:100%;background:var(--yellow);border-radius:8px;"></div></div>
+            <span style="font-weight:700;color:var(--yellow);">78%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-card">
+        <h3>👪 保護者エンゲージメント</h3>
+        <div class="dash-stat-row">
+          <div class="dash-stat"><div class="num" style="color:var(--coral);">67<span style="font-size:12px">%</span></div><div class="lbl">リアクション率</div></div>
+          <div class="dash-stat"><div class="num" style="color:var(--teal);">23<span style="font-size:12px">%</span></div><div class="lbl">プレミアム率</div></div>
+        </div>
+        <div style="font-size:10px;color:var(--text-mid);margin-top:6px;line-height:1.6;">
+          未視聴保護者: 3名<br>
+          ・小林家（3日連続未視聴）<br>
+          ・山田家（2日連続未視聴）<br>
+          ・木村家（本日未視聴）
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /stage -->
+
+<script>
+// ── Tab Navigation ──
+const tabs = document.querySelectorAll('.screen-tab');
+const screens = document.querySelectorAll('.screen');
+
+function switchScreen(name) {
+  tabs.forEach(t => t.classList.remove('active'));
+  screens.forEach(s => s.classList.remove('active'));
+  const tab = document.querySelector(`[data-screen="${name}"]`);
+  const screen = document.getElementById('screen-' + name);
+  if (tab) tab.classList.add('active');
+  if (screen) screen.classList.add('active');
+}
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => switchScreen(tab.dataset.screen));
+});
+
+// ── Premium Toggle ──
+const premiumToggle = document.getElementById('premiumToggle');
+const toggleSwitch = document.getElementById('toggleSwitch');
+const freeLabel = document.getElementById('freeLabel');
+const premiumLabel = document.getElementById('premiumLabel');
+
+premiumToggle.addEventListener('click', () => {
+  document.body.classList.toggle('premium');
+  const isPremium = document.body.classList.contains('premium');
+  toggleSwitch.classList.toggle('on', isPremium);
+  freeLabel.classList.toggle('active', !isPremium);
+  premiumLabel.classList.toggle('active', isPremium);
+});
+freeLabel.classList.add('active');
+
+// ── Kids Screen Step Demo ──
+function setKidsStep(step) {
+  const wrap = document.getElementById('moomuWrap');
+  const bubble = document.getElementById('speechBubble');
+  const text = document.getElementById('speechText');
+  const waves = document.getElementById('voiceWaves');
+  const mouth = document.getElementById('moomuMouth');
+  const rec = document.getElementById('recIndicator');
+  const spinner = document.getElementById('timeoutSpinner');
+  const btns = document.querySelectorAll('.demo-btn');
+
+  btns.forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  wrap.className = 'moomu-wrap';
+  waves.classList.add('hidden');
+  mouth.classList.remove('open');
+  rec.classList.remove('show');
+  spinner.classList.remove('show');
+  bubble.style.display = 'block';
+
+  switch(step) {
+    case 'idle':
+      text.innerHTML = 'あそぼう！🌈';
+      break;
+    case 'recognize':
+      text.innerHTML = '<span class="hl">ゆうちゃん</span>、こんにちは！🎉<br>きょうもむーむとおはなししよう！';
+      break;
+    case 'talk':
+      wrap.classList.add('talking');
+      mouth.classList.add('open');
+      waves.classList.remove('hidden');
+      text.innerHTML = 'おさんぽで なにを<br><span class="hl">みつけた？</span> 🌸';
+      break;
+    case 'timeout':
+      spinner.classList.add('show');
+      text.innerHTML = 'ちょっとまってね〜<br>むーむも かんがえてるの... 💭';
+      setTimeout(() => {
+        text.innerHTML = 'じゃあ むーむが やってみるね！<br><span class="hl">むーむは にじをつくれるようになったよ！</span> 🌈';
+        spinner.classList.remove('show');
+      }, 3000);
+      break;
+    case 'record':
+      wrap.classList.add('recording');
+      rec.classList.add('show');
+      mouth.classList.add('open');
+      waves.classList.remove('hidden');
+      text.innerHTML = 'じゃあ <span class="hl">とるよ！</span><br>おはなし してね！ 📹';
+      break;
+    case 'done':
+      bubble.style.display = 'block';
+      text.innerHTML = 'すごい！じょうずにできたね！<br>🌟✨🎉';
+      wrap.style.animation = 'none';
+      setTimeout(() => { wrap.style.animation = ''; }, 10);
+      break;
+  }
+}
+
+// ── Teacher Tabs ──
+function switchTeacherTab(el, tab) {
+  document.querySelectorAll('.teacher-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('teacher-topic').classList.toggle('hidden', tab !== 'topic');
+  document.getElementById('teacher-approval').classList.toggle('hidden', tab !== 'approval');
+  document.getElementById('teacher-checklist').classList.toggle('hidden', tab !== 'checklist');
+}
+
+// ── Approval Actions ──
+function approveVideo(btn) {
+  btn.textContent = '承認済';
+  btn.classList.add('done');
+  btn.closest('.approval-item').style.opacity = '0.5';
+  const retake = btn.parentElement.querySelector('.retake-btn');
+  if (retake) retake.style.display = 'none';
+}
+function retakeVideo(btn) {
+  const item = btn.closest('.approval-item');
+  item.style.background = '#fff3e0';
+  btn.textContent = '依頼済';
+  btn.style.background = '#ccc';
+  btn.style.pointerEvents = 'none';
+  const approve = btn.parentElement.querySelector('.approve-btn');
+  if (approve) approve.style.display = 'none';
+}
+
+// ── Reactions ──
+function bumpReaction(el) {
+  const count = el.querySelector('.rcount');
+  count.textContent = parseInt(count.textContent) + 1;
+  el.style.background = '#fce4ec';
+  el.style.transform = 'scale(1.2)';
+  setTimeout(() => { el.style.background = ''; el.style.transform = ''; }, 300);
+}
+
+function toggleStamp(btn) {
+  btn.classList.toggle('selected');
+  if (btn.classList.contains('selected')) {
+    btn.style.animation = 'popIn .3s ease';
+    setTimeout(() => btn.style.animation = '', 300);
+  }
+}
+
+// ── Play Animation ──
+function animatePlay(el) {
+  el.style.display = 'none';
+  const fill = document.getElementById('progressFill');
+  let w = 0;
+  const int = setInterval(() => {
+    w += 2;
+    fill.style.width = w + '%';
+    if (w >= 100) { clearInterval(int); el.style.display = 'flex'; fill.style.width = '43%'; }
+  }, 600);
+}
+</script>
+</body>
+</html>
